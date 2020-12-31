@@ -1,5 +1,8 @@
 import numpy as np
-import cv2,time,argparse,os,queue,torch
+import cv2,time,argparse,os,queue,torch,natsort
+from numpy.lib.npyio import save
+# from numpy.lib.npyio import save
+# from numpy.lib.utils import source
 
 from deep_sort.utils.parser import get_config
 from deep_sort.deep_sort import DeepSort
@@ -195,12 +198,49 @@ class Read_Camera:
         if ret:
             frame=frame if self.resize==1.0 else cv2.resize(frame,self.shape)
         return ret,frame
+
+class Folder_Capture:
+    def __init__(self,source) -> None:
+        super().__init__()
+        self.source=source
+        self.img_List=natsort.natsorted(os.listdir(source))
+        self.index=0
+        _,img=self.read()
+        self.index-=1
+        self.shape=img.shape
+        
+    def read(self):
+        img=cv2.imread(os.path.join(self.source,self.img_List[self.index]))
+        try:
+            img.shape
+            ret=True
+        except:
+            ret=False
+        self.index+=1
+        return ret, img
+    
+    def isOpened(self): 
+        return self.index < len(self.img_List)
+            
+    def get(self,i=0):
+        if i==1:
+            return self.index
+        if i==7:
+            return len(self.img_List)
+        if i==3:
+            return self.shape[1]
+        if i==4:
+            return self.shape[0]
+    
+    def release(self):
+        pass
+        
         
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-j','--job_name', type=int, default='1', help='selective job name list:dynamic_img,motion_detect,motion_history,frame_diff')
-    parser.add_argument('-t','--t-length', type=int, default='10', help='number of multi-frames')
-    parser.add_argument('-v','--video_path', type=str, default='input/videos/car.mp4', help='video or stream path')
+    parser.add_argument('-l','--length', type=int, default='10', help='number of multi-frames')
+    parser.add_argument('-s','--source', type=str, default='input/temp', help='video or stream path')
     parser.add_argument('-r','--resize', type=float, default='1', help='img resize retio')
     parser.add_argument("--save", action='store_true',help='if save result to video')
     parser.add_argument("--show", action='store_true',help='if show result')
@@ -208,26 +248,38 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     selector={0:Read_Camera,1:Dynamic_Img,2:Motion_History,3:Frame_Diff,4:Motion_Detect}
-    args.video_path=0 if args.video_path=='0' else args.video_path
-    cap = cv2.VideoCapture(args.video_path)
-    video_process=selector[args.job_name](cap,args.t_length,args.resize)
+    args.source=0 if args.source=='0' else args.source
+    source_Type='image' if os.path.isdir(args.source) else 'video'
+    cap = cv2.VideoCapture(args.source) if source_Type=='video' else Folder_Capture(args.source)
+    process=selector[args.job_name](cap,args.length,args.resize)
     fourcc = cv2.VideoWriter_fourcc('P','I','M','1')
     if args.save:
-        save_path='camera_result.avi' if args.video_path=='0' else os.path.join(os.path.dirname(args.video_path),
-                                                                os.path.basename(args.video_path).split('.')[0]+'_VPR.avi')
-        video = cv2.VideoWriter(save_path, fourcc, 25 ,video_process.shape)
+        if source_Type=='video':
+            save_path='camera_result.avi' if args.source=='0' else os.path.join(os.path.dirname(args.source),
+                                                                    os.path.basename(args.source).split('.')[0]+'_MOIF.avi')
+            video = cv2.VideoWriter(save_path, fourcc, 25 ,process.resize)
+        else:
+            save_path=os.path.join(os.path.dirname(args.source),os.path.basename(args.source)+'_MOIF')
+            os.makedirs(save_path,exist_ok=True)
+    index=1       
     while cap.isOpened():
-        ret,dimg=video_process.update()
+        ret,mo_img=process.update()
+        print(ret)
         if ret:
             if args.show:
-                cv2.imshow('dynamic',dimg)
+                cv2.imshow('dynamic',mo_img)
+                time.sleep(0.2)
                 if cv2.waitKey(1) == ord('q'):
                     break
             if args.save:
-                video.write(dimg)
+                if source_Type=='video':
+                    video.write(mo_img)
+                else:
+                    cv2.imwrite(os.path.join(save_path,'{}.jpg'.format(index)),mo_img)
+                    index+=1
         else:
             break
     cap.release()
-    if args.save:
+    if args.save and source_Type=='video':
         video.release()
     cv2.destroyAllWindows()
