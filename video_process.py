@@ -182,16 +182,30 @@ class Dynamic_Img:
             dimg=255*dimg
         return ret,dimg.astype(np.uint8)
 
+class Read_Camera:
+    def __init__(self,cap,t,resize) -> None:
+        super().__init__()
+        self.cap=cap
+        self.resize=resize
+        ret,frame=self.cap.read()
+        if ret:
+            self.shape=(frame.shape[1],frame.shape[0]) if self.resize==1.0 else (int(self.resize*frame.shape[1]),int(self.resize*frame.shape[0]))
+    def update(self):
+        ret,frame=self.cap.read()
+        if ret:
+            frame=frame if self.resize==1.0 else cv2.resize(frame,self.shape)
+        return ret,frame
+        
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-j','--job_name', type=int, default='0', help='selective job name list:dynamic_img,motion_detect,motion_history,frame_diff')
+    parser.add_argument('-j','--job_name', type=int, default='1', help='selective job name list:dynamic_img,motion_detect,motion_history,frame_diff')
     parser.add_argument('-t','--t-length', type=int, default='10', help='number of multi-frames')
     parser.add_argument('-v','--video_path', type=str, default='input/videos/car.mp4', help='video or stream path')
     parser.add_argument('-r','--resize', type=float, default='1', help='img resize retio')
     parser.add_argument('-s',"--save_result", action='store_true',help='if save result to video')
     args = parser.parse_args()
     
-    selector={0:Motion_Detect,1:Dynamic_Img,2:Motion_History,3:Frame_Diff}
+    selector={0:Read_Camera,1:Dynamic_Img,2:Motion_History,3:Frame_Diff,4:Motion_Detect}
     args.video_path=0 if args.video_path=='0' else args.video_path
     cap = cv2.VideoCapture(args.video_path)
     video_process=selector[args.job_name](cap,args.t_length,args.resize)
@@ -202,11 +216,14 @@ if __name__ == '__main__':
         video = cv2.VideoWriter(save_path, fourcc, 25 ,video_process.shape)
     while cap.isOpened():
         ret,dimg=video_process.update()
-        cv2.imshow('dynamic',dimg)
-        if args.save_result:
-            video.write(dimg)
-        time.sleep(0)
-        if cv2.waitKey(1) == ord('q'):
+        if ret:
+            cv2.imshow('dynamic',dimg)
+            time.sleep(0)
+            if cv2.waitKey(1) == ord('q'):
+                break
+            if args.save_result:
+                video.write(dimg)
+        else:
             break
     cap.release()
     if args.save_result:
