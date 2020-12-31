@@ -202,7 +202,9 @@ if __name__ == '__main__':
     parser.add_argument('-t','--t-length', type=int, default='10', help='number of multi-frames')
     parser.add_argument('-v','--video_path', type=str, default='input/videos/car.mp4', help='video or stream path')
     parser.add_argument('-r','--resize', type=float, default='1', help='img resize retio')
-    parser.add_argument('-s',"--save_result", action='store_true',help='if save result to video')
+    parser.add_argument("--save", action='store_true',help='if save result to video')
+    parser.add_argument("--show", action='store_true',help='if show result')
+    
     args = parser.parse_args()
     
     selector={0:Read_Camera,1:Dynamic_Img,2:Motion_History,3:Frame_Diff,4:Motion_Detect}
@@ -210,22 +212,22 @@ if __name__ == '__main__':
     cap = cv2.VideoCapture(args.video_path)
     video_process=selector[args.job_name](cap,args.t_length,args.resize)
     fourcc = cv2.VideoWriter_fourcc('P','I','M','1')
-    if args.save_result:
+    if args.save:
         save_path='camera_result.avi' if args.video_path=='0' else os.path.join(os.path.dirname(args.video_path),
                                                                 os.path.basename(args.video_path).split('.')[0]+'_VPR.avi')
         video = cv2.VideoWriter(save_path, fourcc, 25 ,video_process.shape)
     while cap.isOpened():
         ret,dimg=video_process.update()
         if ret:
-            cv2.imshow('dynamic',dimg)
-            time.sleep(0)
-            if cv2.waitKey(1) == ord('q'):
-                break
-            if args.save_result:
+            if args.show:
+                cv2.imshow('dynamic',dimg)
+                if cv2.waitKey(1) == ord('q'):
+                    break
+            if args.save:
                 video.write(dimg)
         else:
             break
     cap.release()
-    if args.save_result:
+    if args.save:
         video.release()
     cv2.destroyAllWindows()
