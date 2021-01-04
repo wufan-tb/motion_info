@@ -257,18 +257,16 @@ if __name__ == '__main__':
         if source_Type=='video':
             save_path='camera_result.avi' if args.source=='0' else os.path.join(os.path.dirname(args.source),
                                                                     os.path.basename(args.source).split('.')[0]+'_MOIF.avi')
-            video = cv2.VideoWriter(save_path, fourcc, 25 ,process.resize)
+            video = cv2.VideoWriter(save_path, fourcc, 25 ,process.shape)
         else:
             save_path=os.path.join(os.path.dirname(args.source),os.path.basename(args.source)+'_MOIF')
             os.makedirs(save_path,exist_ok=True)
     index=1       
     while cap.isOpened():
         ret,mo_img=process.update()
-        print(ret)
         if ret:
             if args.show:
                 cv2.imshow('dynamic',mo_img)
-                time.sleep(0.2)
                 if cv2.waitKey(1) == ord('q'):
                     break
             if args.save:
