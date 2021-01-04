@@ -238,7 +238,7 @@ class Folder_Capture:
         
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-j','--job_name', type=int, default='1', help='selective job name list:dynamic_img,motion_detect,motion_history,frame_diff')
+    parser.add_argument('-j','--job_name', type=int, default='1', choices=[0,1,2,3,4])
     parser.add_argument('-l','--length', type=int, default='10', help='number of multi-frames')
     parser.add_argument('-s','--source', type=str, default='input/temp', help='video or stream path')
     parser.add_argument('-r','--resize', type=float, default='1', help='img resize retio')
@@ -246,7 +246,9 @@ if __name__ == '__main__':
     parser.add_argument("--show", action='store_true',help='if show result')
     
     args = parser.parse_args()
-    
+    print("== Arguments: ==")
+    for item in args.__dict__.items():
+        print(item)
     selector={0:Read_Camera,1:Dynamic_Img,2:Motion_History,3:Frame_Diff,4:Motion_Detect}
     args.source=0 if args.source=='0' else args.source
     source_Type='image' if os.path.isdir(args.source) else 'video'
