@@ -4,8 +4,8 @@ from numpy.lib.npyio import save
 # from numpy.lib.npyio import save
 # from numpy.lib.utils import source
 
-from deep_sort.utils.parser import get_config
-from deep_sort.deep_sort import DeepSort
+# from deep_sort.utils.parser import get_config
+# from deep_sort.deep_sort import DeepSort
 
 class Frame_Diff:
     def __init__(self,cap,t,resize) -> None:
@@ -157,32 +157,31 @@ class Dynamic_Img:
         self.cap=cap
         self.t=t
         self.resize=resize
-        for _ in range(t):
-            ret,frame=cap.read()
-            if ret:
-                self.shape=(frame.shape[1],frame.shape[0]) if self.resize==1.0 else (int(self.resize*frame.shape[1]),int(self.resize*frame.shape[0]))
-                frame=frame if self.resize==1.0 else cv2.resize(frame,self.shape)
-                frame=frame*(1/255)
-                self.t_Frames.append(frame)
+        self.shape=(cap.get(4),cap.get(3)) if self.resize==1.0 else (int(self.resize*cap.get(4)),int(self.resize*cap.get(3)))
 
     def update(self):
         ret,frame=self.cap.read()
-        dimg=np.zeros(self.t_Frames[-1].shape)
         if ret:
             frame=frame if self.resize==1.0 else cv2.resize(frame,self.shape)
             frame=frame*(1/255)
-            for i in range(1,len(self.t_Frames)+1):
+            dimg=np.zeros(frame.shape)
+            self.t_Frames.append(frame)
+            T=min(self.t,len(self.t_Frames))
+            for i in range(1,T+1):
                 temp=0
-                for j in range(i,len(self.t_Frames)+1):
-                    temp+=(2*j-self.t-1)/(j)     
+                for j in range(i,T+1):
+                    temp+=(2*j-T-1)/(j)     
                 
                 dimg+=temp*self.t_Frames[i-1]
-            self.t_Frames.append(frame)
-            self.t_Frames.pop(0)
             
-            dimg=np.maximum(dimg,0)
-            dimg=dimg/(dimg[np.unravel_index(dimg.argmax(), dimg.shape)])
-            dimg=255*dimg
+            if T>1:
+                dimg -= (dimg[np.unravel_index(dimg.argmin(), dimg.shape)])
+                dimg /= (dimg[np.unravel_index(dimg.argmax(), dimg.shape)])
+                dimg = 255*dimg
+                
+            if len(self.t_Frames)>self.t:
+                self.t_Frames.pop(0)
+                
         return ret,dimg.astype(np.uint8)
 
 class Read_Camera:
@@ -238,17 +237,15 @@ class Folder_Capture:
         
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-j','--job_name', type=int, default='1', choices=[0,1,2,3,4])
-    parser.add_argument('-l','--length', type=int, default='10', help='number of multi-frames')
+    parser.add_argument('-j','--job_name', type=int, default='1', help='selective job name list:dynamic_img,motion_detect,motion_history,frame_diff')
+    parser.add_argument('-l','--length', type=int, default='5', help='number of multi-frames')
     parser.add_argument('-s','--source', type=str, default='input/temp', help='video or stream path')
     parser.add_argument('-r','--resize', type=float, default='1', help='img resize retio')
     parser.add_argument("--save", action='store_true',help='if save result to video')
     parser.add_argument("--show", action='store_true',help='if show result')
     
     args = parser.parse_args()
-    print("== Arguments: ==")
-    for item in args.__dict__.items():
-        print(item)
+    
     selector={0:Read_Camera,1:Dynamic_Img,2:Motion_History,3:Frame_Diff,4:Motion_Detect}
     args.source=0 if args.source=='0' else args.source
     source_Type='image' if os.path.isdir(args.source) else 'video'
