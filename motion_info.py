@@ -163,7 +163,6 @@ class Dynamic_Img:
         ret,frame=self.cap.read()
         if ret:
             frame=frame if self.resize==1.0 else cv2.resize(frame,self.shape)
-            frame=frame*(1/255)
             dimg=np.zeros(frame.shape)
             self.t_Frames.append(frame)
             T=min(self.t,len(self.t_Frames))
