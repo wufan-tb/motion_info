@@ -157,7 +157,7 @@ class Dynamic_Img:
         self.cap=cap
         self.t=t
         self.resize=resize
-        self.shape=(cap.get(4),cap.get(3)) if self.resize==1.0 else (int(self.resize*cap.get(4)),int(self.resize*cap.get(3)))
+        self.shape=(cap.get(3),cap.get(4)) if self.resize==1.0 else (int(self.resize*cap.get(3)),int(self.resize*cap.get(4)))
 
     def update(self):
         ret,frame=self.cap.read()
@@ -226,9 +226,9 @@ class Folder_Capture:
             return self.index
         if i==7:
             return len(self.img_List)
-        if i==3:
-            return self.shape[1]
         if i==4:
+            return self.shape[1]
+        if i==3:
             return self.shape[0]
     
     def release(self):
@@ -248,7 +248,7 @@ if __name__ == '__main__':
     
     selector={0:Read_Camera,1:Dynamic_Img,2:Motion_History,3:Frame_Diff,4:Motion_Detect}
     args.source=0 if args.source=='0' else args.source
-    source_Type='image' if os.path.isdir(args.source) else 'video'
+    source_Type='image' if (args.source!=0 and os.path.isdir(args.source)) else 'video'
     cap = cv2.VideoCapture(args.source) if source_Type=='video' else Folder_Capture(args.source)
     process=selector[args.job_name](cap,args.length,args.resize)
     fourcc = cv2.VideoWriter_fourcc('P','I','M','1')
