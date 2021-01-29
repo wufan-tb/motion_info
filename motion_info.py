@@ -14,26 +14,23 @@ class Frame_Diff:
         self.cap=cap
         self.t=t
         self.resize=resize
-        for _ in range(t):
-            ret,frame=cap.read()
-            if ret:
-                frame=frame/255.0
-                self.shape=(frame.shape[1],frame.shape[0]) if self.resize==1.0 else (int(self.resize*frame.shape[1]),int(self.resize*frame.shape[0]))
-                frame=frame if self.resize==1.0 else cv2.resize(frame,self.shape)
-                self.t_Frames.append(frame)
+        self.shape=(cap.get(3),cap.get(4)) if self.resize==1.0 else (int(self.resize*cap.get(3)),int(self.resize*cap.get(4)))
 
     def update(self):
         ret,frame=self.cap.read()
-        gradient=np.zeros(self.t_Frames[-1].shape)
+        frame=frame/255.0
+        frame=frame if self.resize==1.0 else cv2.resize(frame,self.shape)
+        gradient=np.zeros(frame.shape)
+        self.t_Frames.append(frame)
         if ret:
-            frame=frame/255.0
-            frame=frame if self.resize==1.0 else cv2.resize(frame,self.shape)
             gradient=frame-self.t_Frames[0]
-            self.t_Frames.append(frame)
-            self.t_Frames.pop(0)
-            gradient=np.maximum(gradient,0)
-            gradient=gradient/(gradient[np.unravel_index(gradient.argmax(), gradient.shape)])
-            gradient=gradient*255
+            if len(self.t_Frames)>1:
+                gradient -= (gradient[np.unravel_index(gradient.argmin(), gradient.shape)])
+                gradient /= (gradient[np.unravel_index(gradient.argmax(), gradient.shape)])
+                gradient = 255*gradient
+            
+            if len(self.t_Frames)>self.t:
+                self.t_Frames.pop(0)
         return ret,gradient.astype(np.uint8)
 
 class Motion_History:
@@ -226,9 +223,9 @@ class Folder_Capture:
         if i==7:
             return len(self.img_List)
         if i==4:
-            return self.shape[1]
-        if i==3:
             return self.shape[0]
+        if i==3:
+            return self.shape[1]
     
     def release(self):
         pass
