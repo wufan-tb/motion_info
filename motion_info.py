@@ -154,7 +154,7 @@ class Dynamic_Img:
         self.cap=cap
         self.t=t
         self.resize=resize
-        self.shape=(cap.get(3),cap.get(4)) if self.resize==1.0 else (int(self.resize*cap.get(3)),int(self.resize*cap.get(4)))
+        self.shape=(int(cap.get(3)),int(cap.get(4))) if self.resize==1.0 else (int(self.resize*cap.get(3)),int(self.resize*cap.get(4)))
 
     def update(self):
         ret,frame=self.cap.read()
@@ -178,7 +178,9 @@ class Dynamic_Img:
             if len(self.t_Frames)>self.t:
                 self.t_Frames.pop(0)
                 
-        return ret,dimg.astype(np.uint8)
+            return ret,dimg.astype(np.uint8)
+        else:
+            return ret,None
 
 class Read_Camera:
     def __init__(self,cap,t,resize) -> None:
@@ -252,6 +254,7 @@ if __name__ == '__main__':
         if source_Type=='video':
             save_path='camera_result.avi' if args.source=='0' else os.path.join(os.path.dirname(args.source),
                                                                     os.path.basename(args.source).split('.')[0]+'_MOIF.avi')
+            print(save_path,fourcc,process.shape)
             video = cv2.VideoWriter(save_path, fourcc, 25 ,process.shape)
         else:
             save_path=os.path.join(os.path.dirname(args.source),os.path.basename(args.source)+'_MOIF')
