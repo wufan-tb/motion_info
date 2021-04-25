@@ -160,6 +160,7 @@ class Dynamic_Img:
         ret,frame=self.cap.read()
         if ret:
             frame=frame if self.resize==1.0 else cv2.resize(frame,self.shape)
+            frame=cv2.GaussianBlur(frame, ksize=(3,3), sigmaX=0, sigmaY=0)
             dimg=np.zeros(frame.shape)
             self.t_Frames.append(frame)
             T=min(self.t,len(self.t_Frames))
@@ -172,6 +173,9 @@ class Dynamic_Img:
             
             if T>1:
                 dimg -= (dimg[np.unravel_index(dimg.argmin(), dimg.shape)])
+                if dimg[np.unravel_index(dimg.argmax(), dimg.shape)]<500:
+                    dimg+=600
+                    dimg[0,0]=[1500,1500,1500] if len(dimg.shape)==3 else 1500
                 dimg /= (dimg[np.unravel_index(dimg.argmax(), dimg.shape)])
                 dimg = 255*dimg
                 
